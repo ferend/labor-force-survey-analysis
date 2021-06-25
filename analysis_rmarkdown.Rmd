@@ -1,0 +1,227 @@
+---
+title: "Labor Force Survey Analysis For Istanbul"
+author: "Ferhat Eren Dalçık"
+date: "14 05 2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(haven)
+library(PerformanceAnalytics)
+library(corrplot)
+library(car)
+library(effects)
+library(dplyr)
+```
+
+# Project Definiton
+
+In this project I defined 2 questions related to Labor Force Survey for Istanbul. In first question I estimated an equation for wage, then in second question I determined whether or not a statistically significant gender base difference in the wages. 
+
+I started to answer the questions with an analysis on the dataset. Then interpretation part comes for the questions. 
+
+I assigned the data to a dataset named "labordata" using tidyverse library and "read_dta()" function, then I changed the education numbers.
+
+dataset named "data" is updated version of the Labor Force Survey for Istanbul.
+
+```{r, echo=FALSE}
+
+labordatas <- read_dta(file = "hia_ist-19(1).dta")
+datas <- labordatas[-c(1)]
+datas <- na.omit(datas)
+
+
+datas <- datas %>%                               
+ mutate(education = replace(education, education == 0, 2)) # Recoding education with correct values.
+datas <- datas %>%                               
+  mutate(education = replace(education, education == 1, 5))
+datas <- datas %>%                               
+  mutate(education = replace(education, education == 2, 8))
+datas <- datas %>%                               
+  mutate(education = replace(education, education == 31, 11))
+datas <- datas %>%                               
+  mutate(education = replace(education, education == 32, 12))
+datas <- datas %>%                               
+  mutate(education = replace(education, education == 4, 15))
+datas <- datas %>%                               
+  mutate(education = replace(education, education == 5, 18))
+
+
+
+```
+
+### Data Analyis and Exploration
+
+#### Labor Force Survey 2019 data from Istanbul. Data originally created by TUIK.
+
+```{r , echo = FALSE}
+summary(datas)
+```
+
+
+
+```{r ,}
+mean(datas$wage, na.rm = T) #Mean of Wage
+median(datas$wage, na.rm =T) #Median of Wage
+var(datas$wage, na.rm = T)  #Variance of Wage
+sd(datas$wage, na.rm = T) #Standart Deviation of Wage
+```
+
+**We have 10694 observations and 11 variables in Labor Force Survey datas. I dropped the first variable which is observation in order to have better result in analyses. These variables are monthly "wage" of worker, dummy variable as "male" if it is 1 it corresponds to the male, if it is 0 it corresponds to the female gender, "age" of the worker, "education" level of the worker, two dummy variables as "informal" and and "sector" these corresponds to the informality and sector of the worker,** 
+
+*(Sectors are : 
+1. Manufacture 
+2. Electricity-Water 
+3. Construction 
+4. Trade & Motor Repair 
+5. Transportation & Storage 
+6. Accomodation & Food Services 
+7. Information & Communication 
+8. Financial & Insurance 
+9. Real Estate Services 
+10. Prof, Sci, & Tech Services 
+11. Administrative & Support Services 
+12. Public Admin 
+13. Education 
+14. Health & Social Work 
+15. Arts, Entertainment 
+16. Other Services)*
+
+**"work_hour" indicates the weekly work hour, if "private" variable is 1 that means it is a private work, "size" is for number of employee in that working area, "tenure" gives the working years in that firm and finally "profession" indicates the profession of the worker.**
+
+*(Professions are: 
+   0. Military
+  1.  Managers
+  2.  Professional
+  3.  Technician
+  4.  Clerical
+  5.  Services and Sales
+  6.  Skilled agriculture
+  7.  Artisanal
+  8.  Operators
+  9.  Unskilled )*
+ 
+**Range is high for wage. Difference between 3rd quartile and max is high too which means, there are right hand side outliers. I We can see the minimum wage owners age is 15 according to datas.**
+ 
+#### Following plots and analyses can be made with the datasset.
+
+```{r , echo = FALSE}
+correlations <- cor(datas[,c (1,3, 4, 7)])
+corrplot(correlations, method="circle")
+```
+
+
+From the correlations plot we can see that wage has slightly positive relation with age, as age increases wage is increasing too, but the work hour has a negative relation with wage, as work hour  increases it does not increase our wage. Education level has a better relationship with wage than work hour has, but not as good relation as age. Since it is too hard to interpret all predictors together I took some parts of it to analyze.
+
+
+```{r , echo = FALSE}
+
+ outliers <-boxplot.stats(datas$wage)$out
+
+ boxplot(datas$wage,
+             height = 330,
+             width= 330,
+             ylim = c(0,8000),
+             ylab = "Wages",
+             main = "Boxplot of Wage With Outliers",
+             col ="orange")
+ 
+out<- which(datas$wage %in% c(outliers))
+
+```
+
+From looking to the table we can see majority of the wagers gain approximately 2500 to 3000 but it has 814 outliers in 10694 observation. 
+
+
+```{r , echo = FALSE}
+scatterplotMatrix ( ~ wage + age + work_hour , data = datas )
+```
+
+From this plot it can be interpret that wage is highly right skewed distribution, while constructing our linear model it will be good for us to take the log of wage since we know it is highly skewed. 
+
+### Question 1 Answer:
+
+To estimate a wage equation we can use "male","age", "education", and "work_hour". 
+
+*Our equation will look like this:*
+
+**We construct a multiple regression model in order to determine the relationship between our dependent and independent variables.**
+
+```{r , echo = FALSE}
+wage.mod <- lm(wage ~ male + age + education + work_hour , data = datas)
+```
+
+```{r , echo = TRUE}
+S(wage.mod)
+```
+
+
+*wage.mod does not have the log transformation on wage.*
+
+
+```{r , echo = FALSE}
+wage.mod2 <- lm(log2(wage) ~ male +  age + education + work_hour , data = datas)
+S(wage.mod2)
+```
+
+```{r , echo = TRUE}
+coef(wage.mod2)
+S(wage.mod2)
+```
+
+*wage.mod2 has log transformation of wage.*
+
+
+**From the F statistics of model we can say that our model is significant and we are able to do further interpretation on coefficients and their significance levels. Adjusted R-squared shows us the power of our estimation. "Broadly", our estimation is able to explain total variance of wage variable with 0.58.** 
+
+**Age is significant in our model but age and work_hour has the highest p value of significancy. 1 unit of change in age is 14 positive unit change in workers wage. Interestingly working hour of a worker has a negative effect on the wage, 1 unit of change in work hour, has negative -63 effect on wage and 1 unit change in education has a positive effect on wage. All of this variables are significant in or model.**
+
+
+```{r , echo = FALSE}
+plot(predictorEffects(wage.mod2))
+```
+
+We can visualize what we estimated in our regression model with predictor effect plots. As we can see with more working hour wager has a less wage, and as education level increases wage increases too.
+
+
+### Question 2 Answer:
+
+```{r , echo = FALSE}
+gender= ggplot(datas, aes(x=male)) +
+  geom_bar(fill='red')
+gender
+```
+
+We can see from plot that most of the survey takers are male.
+
+
+```{r , echo = FALSE}
+boxplot(age ~ male , data = datas)
+```
+
+
+As we can see from the boxplot age of the female and male workers are nearly same and both of them does not have outliers.
+
+
+
+*It will be good for us to take the regression of the male and wage together.*
+
+
+
+```{r , echo = FALSE}
+wage.mod3 <- lm (log(wage) ~ male, data = datas)
+```
+
+```{r , echo = TRUE}
+coef(wage.mod3)
+S(wage.mod3)
+```
+
+
+**We can see that our f-statistic value for wage male estimation is insignificant and as we can not interpret the results for it. According to result of this regression model we can say gender is insignificant which means we cannot explain the wage with male variable. Since it not significant we might say datas does not suggest that there is gender discrimination exists among the wagers. **
+
+

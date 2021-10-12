@@ -8,7 +8,7 @@ I started to answer the questions with an analysis on the dataset. Then interpre
 
 Markdown file of the analysis and html output is available.
 
-### Please download .html file for detailed discussion of my project
+** Please download .html file for detailed discussion of my project **
 
 Some plots and OLS estimations for the equations are available. 
 

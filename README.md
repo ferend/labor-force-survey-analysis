@@ -8,6 +8,8 @@ I started to answer the questions with an analysis on the dataset. Then interpre
 
 Markdown file of the analysis and html output is available.
 
+### Please download .html file for detailed discussion of my project
+
 Some plots and OLS estimations for the equations are available. 
 
 ![resim](https://user-images.githubusercontent.com/74188001/123438566-7c99b600-d5d9-11eb-9420-dd67ddb060d9.png)
